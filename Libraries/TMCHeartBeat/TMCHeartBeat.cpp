@@ -24,13 +24,18 @@ uint8_t getBPM(uint8_t pin){
     heartrate.getValue(pin);
     rateValue = heartrate.getRate();
     if(rateValue){
+      Serial.print("BPM(temp): ");
+	  Serial.println(rateValue);
       values[count++] = rateValue;
       setCount(&count);
-      for(int i = 0; i < 3; i++)
+      for(int i = 0; i < 3; i++){
         if(values[i] != values[i + 1])
           isGetValue = false;
+		else
+          isGetValue = true;
+	  }
     }
-  }while(!isGetValue);
+  }while(!isGetValue || !rateValue);
   
   return rateValue;
 }

@@ -7,7 +7,7 @@
 
 #define DEVIATION	50
 #define DEPRESSED	7
-#define SAD		8
+#define SAD			8
 #define	NORMAL		9
 #define	HAPPY		10
 #define	ANGRY		11
@@ -18,4 +18,4 @@ uint8_t getBPM(uint8_t pin);
 byte getHRState(uint8_t BPM);
 uint8_t getGSR(uint8_t pin);
 byte getGRState(uint8_t GSR, uint8_t IGSR);
-byte stateValue (byte state_hrt, byte state_gsr);
+byte getStateValue(byte state_hrt, byte state_gsr);
