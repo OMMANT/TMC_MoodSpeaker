@@ -5,7 +5,6 @@
 #define BPMSENSORPIN  A3
 #define GSRSENSORPIN  A2
 
-void lcd_measureing();
 volatile static uint8_t BPM, GSR;
 static uint8_t startTime;
 static byte states[3] = {0};
@@ -31,10 +30,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  while(!isGetState){    
-
-    lcd_measuring();
-    BPM = getBPM(BPMSENSORPIN);
+  while(!isGetState){
+    BPM = getBPM(BPMSENSORPIN, &lcd, startTime);
     states[0] = getHRState(BPM);
     Serial.print("\nBPM: ");
     Serial.println(BPM);
@@ -74,7 +71,7 @@ void loop() {
   lcd.print("Feeling: ");
   lcd.setCursor(10,1);
   switch(states[2]){
-    case DEPRESSED:
+    case GLOOMY:
       lcd.print("GLOOMY");
       break;    
     case SAD:
@@ -91,25 +88,5 @@ void loop() {
       break;
     default:
       lcd.print(" ERROR");
-  }
-}
-
-void lcd_measuring(){
-  uint8_t lcd_counter = 0;
-
-  if(millis() - startTime > 600){
-    lcd_counter++;
-    if (lcd_counter % 3 == 0) {
-      lcd.setCursor(13, 0);
-      lcd.print(".  ");
-    }
-    else if (lcd_counter % 3 ==1) {
-      lcd.setCursor(13, 0);
-      lcd.print(".. ");
-    }
-    else {
-      lcd.setCursor(13, 0);
-      lcd.print("...");
-    }
   }
 }
