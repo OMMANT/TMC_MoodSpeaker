@@ -6,8 +6,8 @@
 #endif
 
 #define DEVIATION	50
-#define DEPRESSED	7
-#define SAD			8
+#define GLOOMY		7
+#define SAD		8
 #define	NORMAL		9
 #define	HAPPY		10
 #define	ANGRY		11
