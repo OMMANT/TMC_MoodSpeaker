@@ -22,9 +22,10 @@
 //소프트웨어 UART 설정
 SoftwareSerial btSerial(BT_TXD, BT_RXD);
 SoftwareSerial mp3Serial(MP3_TXD, MP3_RXD);
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEO_GRB + NEO_KHZ800);
 DFRobotDFPlayerMini myDFPlayer;
 void printDetail(uint8_t type, int value);
-static byte BPM = -1, feelingState;
+static byte BPM = -1, feelingState = -1;
 static uint8_t a = 0;
 
 volatile static uint8_t modifiedValue;
@@ -50,7 +51,7 @@ void setColor(byte color[3]) {
 
 uint8_t getLEDBright(int maxLight) {
   uint8_t uReturn;
-  uReturn = round((exp(sin(millis() / (500.0 * period) * 3.141592)) - 0.36787944) * (maxlight / 2.3504024));
+  uReturn = round((exp(sin(millis() / (500.0 * period) * 3.141592)) - 0.36787944) * (maxLight / 2.3504024));
   return uReturn;
 }
 
@@ -75,6 +76,7 @@ void setup() {
       delay(0);
     }
   }
+  Serial.println("Wait For Value");
   setValueFromBT();
   Serial.println(F("AI Jukebox Connected :: Sense your Feelings!"));
   randomSeed(analogRead(0));
@@ -86,6 +88,8 @@ void setup() {
   pixels.begin();
   wakeTime = millis();
   period = 2;  //주기: 2초
+  
+  startMusic();
 }
 
 void loop() {
@@ -101,25 +105,6 @@ void loop() {
     previous_modifiedValue = modifiedValue;
   }
 
-  if(digitalRead(NEXTSONGBTN)==HIGH) {
-    if(feelingState == HAPPY) {
-      myDFPlayer.playFolder(1,random(1,50)); //'기쁨폴더(01)'에서 50개 노래 중 랜덤재생
-    }
-    else if(feelingState == SAD) {
-      myDFPlayer.playFolder(2,random(1,30)); //'슬픔폴더(02)'에서 30개 노래 중 랜덤재생
-    }
-    else if(feelingState = NORMAL) {
-      myDFPlayer.playFolder(3,random(1,30)); //'평상폴더(03)'에서 30개 노래 중 랜덤재생
-    }
-    else if(feelingState == GLOOMY) {
-      myDFPlayer.playFolder(4,random(1,30)); //'우울폴더(04)'에서 30개 노래 중 랜덤재생
-    }
-    else if(feelingState == ANGRY){
-      myDFPlayer.playFolder(5,random(1,30)); //'화남폴더(05)'에서 30개 노래 중 랜덤재
-    }
-  else ;
-  }
-
    //void loop() -- LED부분
    for(int i=0; i<NUMPIXELS; i++) {
     colors[0] = getLEDBright(55);
@@ -129,7 +114,7 @@ void loop() {
     pixels.show();
    }
    
-   if(digtalRead(RE_MEASURE) == HIGH){
+   if(digitalRead(RE_MEASURE) == HIGH){
      if(btSerial.available()){
        byte a = 'm';
        btSerial.write(a);
@@ -141,18 +126,38 @@ void loop() {
 }
 
 void setValueFromBT(){  
-  while(feelingState == -1) {
+  while(1){
     if(btSerial.available()) {
       feelingState = btSerial.read();
       Serial.print("state = ");
       Serial.write(feelingState);
+      break;
     }
   }
-  while(BPM == -1){
+  while(1){
     if(btSerial.available()){
       BPM = btSerial.read();
       Serial.print("BPM = ");
       Serial.write(BPM);
+      break;
     }
   }
+  startMusic();
+}
+
+void startMusic(){
+  if(feelingState == HAPPY)
+    myDFPlayer.playFolder(1, random(1,50)); //'기쁨폴더(01)'에서 50개 노래 중 랜덤재생
+  
+  else if(feelingState == SAD) 
+    myDFPlayer.playFolder(2, random(1,30)); //'슬픔폴더(02)'에서 30개 노래 중 랜덤재생
+  
+  else if(feelingState = NORMAL) 
+    myDFPlayer.playFolder(3, random(1,30)); //'평상폴더(03)'에서 30개 노래 중 랜덤재생
+  
+  else if(feelingState == GLOOMY) 
+    myDFPlayer.playFolder(4, random(1,30)); //'우울폴더(04)'에서 30개 노래 중 랜덤재생
+  
+  else if(feelingState == ANGRY)
+    myDFPlayer.playFolder(5, random(1,30)); //'화남폴더(05)'에서 30개 노래 중 랜덤재
 }
