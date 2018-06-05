@@ -38,6 +38,7 @@ const byte colorDAL[3] = {0, 114, 206};   //When SAD
 const byte colorGLA[3] = {56, 20, 96};    //When GLOOMY
 const byte colorYOU[3] = {255, 2, 2};     //When ANGRY
 const byte colorOMM[3] = {28, 255, 5};    //When HAPPY
+const byte colorINI[3] = {175, 39, 47};
 volatile static byte colors[3] = {175, 39, 47};
 volatile static byte target[3] = {175, 39, 47};
 
@@ -61,8 +62,7 @@ void setup() {
   btSerial.begin(19200);
   mp3_set_serial(Serial);
   delay(1);
-  mp3_set_volume(15);
-  mp3_play();
+  mp3_set_volume(10);
   pinMode(RE_MEASURE, INPUT_PULLUP);
   randomSeed(analogRead(0));
   #if defined(_AVR_ATtiny85_)
@@ -107,7 +107,14 @@ void loop() {
     BPM = 0;
     feelingState = 0;
     setValueFromBT();
+    target[0] = colorINI[0];
+    target[1] = colorINI[1];
+    target[2] = colorINI[2];
+    colors = target;
     while(1){
+      colors[0] = getLEDBright(target[0]);
+      colors[1] = getLEDBright(target[1]);
+      colors[2] = getLEDBright(target[2]);
       if(digitalRead(RE_MEASURE) == HIGH)
         break;
     }
@@ -141,10 +148,6 @@ void startMusic(){
   //Serial.println("playing Music~");
   //Serial.print("Feeling State: ");
   //Serial.println(feelingState);
-  mp3_play();
-  delay(10);
-  mp3_pause();
-  delay(10);
   if(feelingState == HAPPY){
     uint8_t feelA = random(1,50);
     mp3_play(feelA);
