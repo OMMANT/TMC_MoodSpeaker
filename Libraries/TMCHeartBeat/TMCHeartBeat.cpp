@@ -77,7 +77,7 @@ byte getStateValue(byte state_hrt, byte state_gsr){
 	byte state = -1;
 
 	/* <기분에 따른 반환값>
-	*  7 우울 depressed
+	*  7 우울 gloomy
 	*  8 슬픔 sad
 	*  9 평범/평소 normal
 	*  10 기쁨 happy
@@ -94,7 +94,7 @@ byte getStateValue(byte state_hrt, byte state_gsr){
 	}
 	else if(state_gsr == 6){
 		if(state_hrt == 1)
-			state = DEPRESSED;
+			state = GLOOMY;
 		else if(state_hrt == 2)
 			state = SAD;
 		else if(state_hrt == 3 || state_hrt == 4)
