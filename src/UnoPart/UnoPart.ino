@@ -1,45 +1,49 @@
-#include "Arduino.h"
-#include "SoftwareSerial.h"
-#include "DFRobotDFPlayerMini.h"
-#include "Adafruit_NeoPixel.h"
-#include "math.h"
+#include <DFPlayer_Mini_Mp3.h>
+#include <TMCHeartBeat.h>
+#include <math.h>
+#include <Adafruit_NeoPixel.h>
+#include <SoftwareSerial.h>
 #ifdef __AVR__
-  #include "avr/power.h"
+  #include <avr/power.h>
 #endif
 
-//핀번호 설정
-#define BT_TXD       2
-#define BT_RXD       3
-#define NEXTSONGBTN  4 //다음곡 버튼 핀 번호
-#define NEOPIN       9
-#define VOLVRREST    A0 //볼륨조절 가변저항 핀번호(아날로그)
+//Pin definition
+#define BT_TXD 2
+#define BT_RXD 3
+#define NEOPIN 9
+#define MP3_TXD 10
+#define MP3_RXD 11
+#define VOLVRREST A1
+#define LEDVRREST A2
+#define RE_MEASURE 12
 
-//네오픽셀 설정사항(픽셀 수 최대밝기
-#define NUMPIXELS    16
-#define MAXLIGHT     150
+//For NEOPIXEL Ring~
+#define NUMPIXELS 16
 
-//Before void setup() -- 블루투스, MP3모듈 부분
+//Software UART connect
 SoftwareSerial btSerial(BT_TXD, BT_RXD);
-SoftwareSerial mp3Serial(10,11); //RX, TX
-DFRobotDFPlayerMini myDFPlayer;
-void printDetail(uint8_t type, int value); //디버그용 DFPLAYER 상태표시
-int feelingState; //(1: Happy, 2: Sad, 3: Normal, 4: Gloomy, 5: Angry)
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEO_GRB + NEO_KHZ800);
+
+static byte BPM = 0, feelingState = 0;
+static uint8_t a = 0;
 volatile static uint8_t modifiedValue;
 int previous_modifiedValue = -1;
 
-//Before void setup() -- LED 부분
 static const int delayTime = 500;
 static uint8_t wakeTime = 0;
 static float period = 4.0;
 
-volatile byte colors[3] = {55, 157, 196};
-const byte ColorHOS[3] = {55, 157, 196};
-static int targetMin = 45;
-static int targetMax = 185;
+const byte colorSEO[3] = {172, 138, 0};   //When NORMAL
+const byte colorDAL[3] = {0, 114, 206};   //When SAD
+const byte colorGLA[3] = {56, 20, 96};    //When GLOOMY
+const byte colorYOU[3] = {255, 2, 2};     //When ANGRY
+const byte colorOMM[3] = {28, 255, 5};    //When HAPPY
+volatile static byte colors[3] = {175, 39, 47};
+volatile static byte target[3] = {175, 39, 47};
 
-void setColor(byte color[3]) {
+void setColor(byte color[3]){
   wakeTime = millis();
-  for(int i=0; i<NUMPIXELS; i++) {
+  for(int i = 0; i < NUMPIXELS; i++){
     pixels.setPixelColor(i, colors[0], colors[1], colors[2]);
     pixels.show();
   }
@@ -47,180 +51,148 @@ void setColor(byte color[3]) {
 
 uint8_t getLEDBright(int maxLight) {
   uint8_t uReturn;
-  uReturn = round((exp(sin(millis() / (500.0 * period) * 3.141592)) - 0.36787944) * (maxlight / 2.3504024));
+  uReturn = round((exp(sin(millis() / (500.0 * period) * 3.141592)) - 0.36787944) * (maxLight / 2.3504024));
   return uReturn;
 }
 
 void setup() {
-
-  /*인터럽트 핀 두개 정의해서 버튼 주고 하나는 눌리면 
-  btSerial.write('t'); 해주시구요
-  하나는 다음곡? 다른곡 재생으로 해주세요(재준)
-  */
-  
-  Serial.begin(9600);
-  btSerial.begin(9600);
-
-  //void setup() -- MP3모듈 부분
-  pinMode(NEXTSONGBTN, INPUT_PULLUP); //Button Pin Settings
-  mp3Serial.begin(9600);
-  Serial.begin(115200);
-  Serial.println();
-  Serial.println(F("Hello, AI Jukebox is Preparing for a Start-Up!"));
-  Serial.println(F("Initializing the jukebox ... (Waie a little while)"));
-
-  if(!myDFPlayer.begin(mySoftwareSerial)) {
-    Serial.println(F("LOST CONNECTION -- Please Try Again!"));
-    while(true) {
-      delay(0);
-    }
-  }
-
-  Serial.println(F("AI Jukebox Connected :: Sense your Feelings!"));
+  // put your setup code here, to run once:
+  Serial.begin(9600);  
+  btSerial.begin(19200);
+  mp3_set_serial(Serial);
+  delay(1);
+  mp3_set_volume(15);
+  mp3_play();
+  pinMode(RE_MEASURE, INPUT_PULLUP);
   randomSeed(analogRead(0));
-  
-  //void setup() -- LED 부분
   #if defined(_AVR_ATtiny85_)
     if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
   #endif
   pixels.begin();
   wakeTime = millis();
-  period = 2;
+  period = 4;  //주기: 4초
+  //Serial.println("Ready~!");
+  setColor(colors);
+  setValueFromBT();
 }
 
 void loop() {
-
-  //void loop() -- Bluetooth 부분
-  int state = -1;
-  int hun = -1;
-  int ten = -1;
-  int one = -1;
-
-  while(state == -1) {
-    if(btSerial.available()) {
-      state = (btSerial.read());
-      Serial.print("state = ");
-      Serial.println(state);
-    }
-  }
-  while(hun = -1) {
-    if(btSerial.available()) {
-      hun = (btSerial.read());
-      Serial.print("hun = ");
-      Serial.println(hun);
-    }
-  }
-  while(ten = -1) {
-    if(btSerial.available()) {
-      ten = (btSerial.read());
-      Serial.print("ten = ");
-      Serial.println(ten);
-    }
-  }
-  while(one = -1){
-    if(btSerial.available() {
-      one = (btSerial.read());
-      Serial.print("one = ");
-      Serial.println(one);
-      bpm = 100 * hun + 10 * ten + one;
-    }
-  }
-
-  //void loop() -- MP3모듈 부분
+  // put your main code here, to run repeatedly:
   int sensorValue;
   sensorValue = analogRead(VOLVRREST);
-  modifiedValue = int(30*sensorValue/1023);
+  modifiedValue = (int)(30 * sensorValue / 1023);
 
-  if(previous_modifiedValue != modifiedValue) {
-    Serial.print("Current Volume:");
-    Serial.print("  ");
-    Serial.println(modifiedValue);
-    myDFPlayer.volume(modifiedValue);
+  //mp3_play();
+  //delay(6000);
+  if(previous_modifiedValue != modifiedValue) { 
+    //Serial.print("Current Volume:  ");
+    //Serial.println(modifiedValue);
+    mp3_set_volume(modifiedValue);
     previous_modifiedValue = modifiedValue;
   }
-
-  if(digitalRead(NEXTSONGBTN)==HIGH) {
-    if(feelingState == GLOOMY) {
-      myDFPlayer.playFolder(1,random(1,50)); //'기쁨폴더(01)'에서 50개 노래 중 랜덤재생
-    }
-    else if(feelingState == 2) {
-      myDFPlayer.playFolder(2,random(1,30)); //'슬픔폴더(02)'에서 30개 노래 중 랜덤재생
-    }
-    else if(feelingState = 3) {
-      myDFPlayer.playFolder(3,random(1,30)); //'평상폴더(03)'에서 30개 노래 중 랜덤재생
-    }
-    else if(feelingState == 4) {
-      myDFPlayer.playFolder(4,random(1,30)); //'우울폴더(04)'에서 30개 노래 중 랜덤재생
-    }
-    else {
-      myDFPlayer.playFolder(5,random(1,30)); //'화남폴더(05)'에서 30개 노래 중 랜덤재
+   //void loop() -- LED부분
+   targetChange();
+   colors[0] = getLEDBright(target[0]);
+   colors[1] = getLEDBright(target[1]);
+   colors[2] = getLEDBright(target[2]);
+   for(int i=0; i<NUMPIXELS; i++) {
+     pixels.setPixelColor(i, colors[0], colors[1], colors[2]);
+     pixels.show();
+  }
+  //void loop() -- 재측정버튼부분
+  if(digitalRead(RE_MEASURE) == LOW){
+    //Serial.println("Pressed!");
+    byte a = 'm';
+    btSerial.write(a);
+    BPM = 0;
+    feelingState = 0;
+    setValueFromBT();
+    while(1){
+      if(digitalRead(RE_MEASURE) == HIGH)
+        break;
     }
   }
-
-
-   //void loop() -- LED부분
-   for(int i=0; i<NUMPIXELS; i++) {
-    colors[0] = getLEDBright(55);
-    colors[1] = getLEDBright(157);
-    colors[2] = getLEDBright(196);
-    pixels.setPixelColor(i, colors[0], colors[1], colors[2]);
-    pixels.show();
-   }
-   delay(10);
-
 }
 
-void printDetail(uint8_t type, int value){
-  switch (type) {
-    case TimeOut:
-      Serial.println(F("Time Out!"));
+void setValueFromBT(){
+  while(1){
+    if(btSerial.available()){
+      //Serial.println("Received!");
+      feelingState = btSerial.read();
+      //Serial.print("state = ");
+      //Serial.println((int)feelingState);
       break;
-    case WrongStack:
-      Serial.println(F("Stack Wrong!"));
-      break;
-    case DFPlayerCardInserted:
-      Serial.println(F("Card Inserted!"));
-      break;
-    case DFPlayerCardRemoved:
-      Serial.println(F("Card Removed!"));
-      break;
-    case DFPlayerCardOnline:
-      Serial.println(F("Card Online!"));
-      break;
-    case DFPlayerPlayFinished:
-      Serial.print(F("Number:"));
-      Serial.print(value);
-      Serial.println(F(" Play Finished!"));
-      break;
-    case DFPlayerError:
-      Serial.print(F("DFPlayerError:"));
-      switch (value) {
-        case Busy:
-          Serial.println(F("Card not found"));
-          break;
-        case Sleeping:
-          Serial.println(F("Sleeping"));
-          break;
-        case SerialWrongStack:
-          Serial.println(F("Get Wrong Stack"));
-          break;
-        case CheckSumNotMatch:
-          Serial.println(F("Check Sum Not Match"));
-          break;
-        case FileIndexOut:
-          Serial.println(F("File Index Out of Bound"));
-          break;
-        case FileMismatch:
-          Serial.println(F("Cannot Find File"));
-          break;
-        case Advertise:
-          Serial.println(F("In Advertise"));
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
+      
+    }
   }
+  while(1){
+    if(btSerial.available()){
+      //Serial.println("Received!");
+      BPM = btSerial.read();
+      //Serial.print("BPM = ");
+      //Serial.println((int)BPM);
+      break;
+    }
+  }
+  startMusic();
+}
+
+void startMusic(){
+  //Serial.println("playing Music~");
+  //Serial.print("Feeling State: ");
+  //Serial.println(feelingState);
+  mp3_play();
+  delay(10);
+  mp3_pause();
+  delay(10);
+  if(feelingState == HAPPY){
+    uint8_t feelA = random(1,50);
+    mp3_play(feelA);
+  }
+  else if(feelingState == SAD){
+    uint8_t feelB = random(51,80);
+    mp3_play(feelB);
+  }
+  else if(feelingState == NORMAL){
+    uint8_t feelC = random(81,110);
+    mp3_play(feelC);
+  }
+  else if(feelingState = GLOOMY){
+    uint8_t feelD = random(111,140);
+    mp3_play(feelD);
+  }
+  else if(feelingState = ANGRY){
+    uint8_t feelE = random(141,170);
+    mp3_play(feelE);
+  }
+  else ;
+}
+
+void targetChange(){
+  if(feelingState == NORMAL){
+    target[0] = colorSEO[0];
+    target[1] = colorSEO[1];
+    target[2] = colorSEO[2];
+  }
+  else if(feelingState == SAD){
+    target[0] = colorDAL[0];
+    target[1] = colorDAL[1];
+    target[2] = colorDAL[2];
+  }
+  else if(feelingState == HAPPY){
+    target[0] = colorOMM[0];
+    target[1] = colorOMM[1];
+    target[2] = colorOMM[2];
+  }
+  else if(feelingState == GLOOMY){
+    target[0] = colorGLA[0];
+    target[1] = colorGLA[1];
+    target[2] = colorGLA[2];
+  }
+  else if(feelingState == ANGRY){
+    target[0] = colorYOU[0];
+    target[1] = colorYOU[1];
+    target[2] = colorYOU[2];
+  }
+  else ;
 }
