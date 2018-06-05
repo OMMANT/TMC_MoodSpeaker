@@ -1,4 +1,3 @@
-#include "Arduino.h"
 #include "SoftwareSerial.h"
 #include "DFRobotDFPlayerMini.h"
 #include "Adafruit_NeoPixel.h"
@@ -7,26 +6,27 @@
 #ifdef __AVR__
   #include "avr/power.h"
 #endif
-
-//핀번호 설정
+//핀 설정
 #define BT_TXD       2
 #define BT_RXD       3
 #define NEOPIN       9
-#define MP3_TXD		 10
-#define MP3_RXD		 11
-#define VOLVRREST    A1 //볼륨조절 가변저항 핀번호(아날로그)
-#define LEDVRREST	 A2
-#define RE_MEASURE	 12
+#define MP3_TXD     10
+#define MP3_RXD     11
+#define VOLVRREST   A1 //볼륨조절 가변저항 핀번호(아날로그)
+#define LEDVRREST   A2
+#define RE_MEASURE  12
 
 //네오픽셀 설정사항(픽셀 수)
 #define NUMPIXELS    16
 
-//Before void setup() -- 블루투스, MP3모듈 부분
+//소프트웨어 UART 설정
 SoftwareSerial btSerial(BT_TXD, BT_RXD);
-SoftwareSerial mp3Serial(MP3_TXD, MP3_RXD); //RX, TX
+SoftwareSerial mp3Serial(MP3_TXD, MP3_RXD);
 DFRobotDFPlayerMini myDFPlayer;
-void printDetail(uint8_t type, int value); //디버그용 DFPLAYER 상태표시
-static byte feelingState; //(1: Happy, 2: Sad, 3: Normal, 4: Gloomy, 5: Angry)
+void printDetail(uint8_t type, int value);
+static byte BPM = -1, feelingState;
+static uint8_t a = 0;
+
 volatile static uint8_t modifiedValue;
 int previous_modifiedValue = -1;
 
@@ -55,18 +55,16 @@ uint8_t getLEDBright(int maxLight) {
 }
 
 void setup() {
-
   /*인터럽트 핀 두개 정의해서 버튼 주고 하나는 눌리면 
   btSerial.write('t'); 해주시구요
   하나는 다음곡? 다른곡 재생으로 해주세요(재준)
-  */
-  
-  Serial.begin(9600);
-  btSerial.begin(9600);
+  */  
+  Serial.begin(115200);
+  btSerial.begin(9600);  
+  mp3Serial.begin(9600);
+  pinMode(RE_MEASURE, INPUT);
 
   //void setup() -- MP3모듈 부분
-  mp3Serial.begin(9600);
-  Serial.begin(115200);
   Serial.println();
   Serial.println(F("Hello, AI Jukebox is Preparing for a Start-Up!"));
   Serial.println(F("Initializing the jukebox ... (Waie a little while)"));
@@ -77,7 +75,7 @@ void setup() {
       delay(0);
     }
   }
-
+  setValueFromBT();
   Serial.println(F("AI Jukebox Connected :: Sense your Feelings!"));
   randomSeed(analogRead(0));
   
@@ -87,55 +85,17 @@ void setup() {
   #endif
   pixels.begin();
   wakeTime = millis();
-  period = 2;	//주기: 2초
-  pinMode(RE_MEASURE, INPUT);
+  period = 2;  //주기: 2초
 }
 
 void loop() {
-
-  //void loop() -- Bluetooth 부분
-  int hun = -1;
-  int ten = -1;
-  int one = -1;
-
-  while(feelingState == -1) {
-    if(btSerial.available()) {
-      feelingState = (btSerial.read());
-      Serial.print("state = ");
-      Serial.println(feelingState);
-    }
-  }
-  while(hun = -1) {
-    if(btSerial.available()) {
-      hun = (btSerial.read());
-      Serial.print("hun = ");
-      Serial.println(hun);
-    }
-  }
-  while(ten = -1) {
-    if(btSerial.available()) {
-      ten = (btSerial.read());
-      Serial.print("ten = ");
-      Serial.println(ten);
-    }
-  }
-  while(one = -1){
-    if(btSerial.available() {
-      one = (btSerial.read());
-      Serial.print("one = ");
-      Serial.println(one);
-      bpm = 100 * hun + 10 * ten + one;
-    }
-  }
-
   //void loop() -- MP3모듈 부분
   int sensorValue;
   sensorValue = analogRead(VOLVRREST);
-  modifiedValue = int(30*sensorValue/1023);
+  modifiedValue = (int)(30 * sensorValue / 1023);
 
-  if(previous_modifiedValue != modifiedValue) {
-    Serial.print("Current Volume:");
-    Serial.print("  ");
+  if(previous_modifiedValue != modifiedValue) { 
+    Serial.print("Current Volume:  ");
     Serial.println(modifiedValue);
     myDFPlayer.volume(modifiedValue);
     previous_modifiedValue = modifiedValue;
@@ -157,7 +117,7 @@ void loop() {
     else if(feelingState == ANGRY){
       myDFPlayer.playFolder(5,random(1,30)); //'화남폴더(05)'에서 30개 노래 중 랜덤재
     }
-	else ;
+  else ;
   }
 
    //void loop() -- LED부분
@@ -170,67 +130,29 @@ void loop() {
    }
    
    if(digtalRead(RE_MEASURE) == HIGH){
-	   if(btSerial.available()){
-		   byte a = 'K';
-		   a = btSerial.read();
-		   while(a != 'o'){
-			   delay(0);
-		   }
-	   }
+     if(btSerial.available()){
+       byte a = 'm';
+       btSerial.write(a);
+       BPM = -1;
+       feelingState = -1;
+       setValueFromBT();       
+     }
    }
 }
 
-void printDetail(uint8_t type, int value){
-  switch (type) {
-    case TimeOut:
-      Serial.println(F("Time Out!"));
-      break;
-    case WrongStack:
-      Serial.println(F("Stack Wrong!"));
-      break;
-    case DFPlayerCardInserted:
-      Serial.println(F("Card Inserted!"));
-      break;
-    case DFPlayerCardRemoved:
-      Serial.println(F("Card Removed!"));
-      break;
-    case DFPlayerCardOnline:
-      Serial.println(F("Card Online!"));
-      break;
-    case DFPlayerPlayFinished:
-      Serial.print(F("Number:"));
-      Serial.print(value);
-      Serial.println(F(" Play Finished!"));
-      break;
-    case DFPlayerError:
-      Serial.print(F("DFPlayerError:"));
-      switch (value) {
-        case Busy:
-          Serial.println(F("Card not found"));
-          break;
-        case Sleeping:
-          Serial.println(F("Sleeping"));
-          break;
-        case SerialWrongStack:
-          Serial.println(F("Get Wrong Stack"));
-          break;
-        case CheckSumNotMatch:
-          Serial.println(F("Check Sum Not Match"));
-          break;
-        case FileIndexOut:
-          Serial.println(F("File Index Out of Bound"));
-          break;
-        case FileMismatch:
-          Serial.println(F("Cannot Find File"));
-          break;
-        case Advertise:
-          Serial.println(F("In Advertise"));
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
+void setValueFromBT(){  
+  while(feelingState == -1) {
+    if(btSerial.available()) {
+      feelingState = btSerial.read();
+      Serial.print("state = ");
+      Serial.write(feelingState);
+    }
+  }
+  while(BPM == -1){
+    if(btSerial.available()){
+      BPM = btSerial.read();
+      Serial.print("BPM = ");
+      Serial.write(BPM);
+    }
   }
 }
