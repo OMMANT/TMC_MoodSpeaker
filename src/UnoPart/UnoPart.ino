@@ -157,11 +157,11 @@ void startMusic(){
     uint8_t feelC = random(81,110);
     mp3_play(feelC);
   }
-  else if(feelingState = GLOOMY){
+  else if(feelingState == GLOOMY){
     uint8_t feelD = random(111,140);
     mp3_play(feelD);
   }
-  else if(feelingState = ANGRY){
+  else if(feelingState == ANGRY){
     uint8_t feelE = random(141,170);
     mp3_play(feelE);
   }
