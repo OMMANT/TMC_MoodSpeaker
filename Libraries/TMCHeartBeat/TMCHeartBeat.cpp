@@ -7,14 +7,15 @@ void setCount(byte *co){
   }
 }
 
-uint8_t getBPM(uint8_t pin){
+uint8_t getBPM(uint8_t pin, LiquidCrystal_I2C* pLCD){
   /**********변수 선언**********
    * BPM값(임시) 측정마다 바뀔 수 있음
    * 신뢰할만 한 값을 가져왔는지 판단
    * 임시값을 저장하기 위한 배열, 4번 같으면 신뢰하는 것으로 판단
    * Ciurcular List를 위한 count
    *******************************/
-  volatile uint8_t rateValue;
+  uint8_t rateValue, lcd_counter = 0;
+  uint8_t startTime = millis();
   boolean isGetValue = true;
   uint8_t values[4] = {1, 2, 3, 4};
   byte count = 0;
@@ -35,6 +36,22 @@ uint8_t getBPM(uint8_t pin){
           isGetValue = true;
 	  }
     }
+	if(millis() - startTime > 600){
+		lcd_counter++;
+		pLCD->setCursor(13, 0);
+		switch(lcd_counter % 3){
+			case 0:
+				pLCD->print(".  ");
+				break;
+			case 1:
+				pLCD->print(".. ");
+				break;
+			default:
+				pLCD->print("...");
+				break;
+		}
+		startTime = millis();
+	}		
   }while(!isGetValue || !rateValue);
   
   return rateValue;
