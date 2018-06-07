@@ -40,9 +40,9 @@ void initMeasure() {
   lcd.init();
   lcd.backlight();      
   isGetState = false;
-  lcd.setCursor(4, 0);
+  lcd.setCursor(4, 1);
   lcd.print("Measuring");
-  lcd.setCursor(13, 0);
+  lcd.setCursor(13, 1);
   delay(4500);
   initialGSR = getGSR(GSRSENSORPIN);
   Serial.print("InitialGSR: ");
