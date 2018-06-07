@@ -38,7 +38,7 @@ uint8_t getBPM(uint8_t pin, LiquidCrystal_I2C* pLCD){
     }
 	if(millis() - startTime > 600){
 		lcd_counter++;
-		pLCD->setCursor(13, 1);
+		pLCD->setCursor(13, 0);
 		switch(lcd_counter % 3){
 			case 0:
 				pLCD->print(".  ");
