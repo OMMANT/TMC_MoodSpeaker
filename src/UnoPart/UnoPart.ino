@@ -57,7 +57,6 @@ uint8_t getLEDBright(int maxLight) {
 }
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(9600);  
   btSerial.begin(19200);
   mp3_set_serial(Serial);
@@ -71,19 +70,16 @@ void setup() {
   pixels.begin();
   wakeTime = millis();
   period = 4;  //주기: 4초
-  //Serial.println("Ready~!");
   setColor(colors);
   setValueFromBT();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  //void loop() -- MP3
   int sensorValue;
   sensorValue = analogRead(VOLVRREST);
   modifiedValue = (int)(30 * sensorValue / 1023);
 
-  //mp3_play();
-  //delay(6000);
   if(previous_modifiedValue != modifiedValue) { 
     //Serial.print("Current Volume:  ");
     //Serial.println(modifiedValue);
@@ -145,9 +141,6 @@ void setValueFromBT(){
 }
 
 void startMusic(){
-  //Serial.println("playing Music~");
-  //Serial.print("Feeling State: ");
-  //Serial.println(feelingState);
   if(feelingState == HAPPY){
     uint8_t feelA = random(1,50);
     mp3_play(feelA);
