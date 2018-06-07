@@ -9,7 +9,6 @@
 #define BT_RXD  11
 
 volatile static uint8_t BPM, GSR;
-static uint8_t startTime;
 volatile static byte states[3] = {0};
 static uint8_t initialGSR;
 static boolean isGetState = false;
@@ -20,7 +19,6 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   btSerial.begin(19200);
-  startTime = millis();
   digitalWrite(13, LOW);
   initMeasure();
 }
@@ -50,7 +48,7 @@ void initMeasure() {
   Serial.print("InitialGSR: ");
   Serial.println(initialGSR);
   while(!isGetState){
-    BPM = getBPM(BPMSENSORPIN, &lcd, startTime);
+    BPM = getBPM(BPMSENSORPIN, &lcd);
     states[0] = getHRState(BPM);
     Serial.print("\nBPM: ");
     Serial.println(BPM);
