@@ -1,3 +1,6 @@
+#ifndef LiquidCrystal_I2C_h
+	#include <LiquidCrystal_I2C.h>
+#endif
 #ifndef __DFRobot_HEARTRATE__H
 	#include <DFRobot_Heartrate.h>
 #endif
@@ -14,7 +17,7 @@
 #define	ERROR		-1
 
 void setCount(byte *co);
-uint8_t getBPM(uint8_t pin);
+uint8_t getBPM(uint8_t pin, LiquidCrystal_I2C* pLCD);
 byte getHRState(uint8_t BPM);
 uint8_t getGSR(uint8_t pin);
 byte getGRState(uint8_t GSR, uint8_t IGSR);
