@@ -81,8 +81,6 @@ void loop() {
   modifiedValue = (int)(30 * sensorValue / 1023);
 
   if(previous_modifiedValue != modifiedValue) { 
-    //Serial.print("Current Volume:  ");
-    //Serial.println(modifiedValue);
     mp3_set_volume(modifiedValue);
     previous_modifiedValue = modifiedValue;
   }
@@ -97,7 +95,6 @@ void loop() {
   }
   //void loop() -- 재측정버튼부분
   if(digitalRead(RE_MEASURE) == LOW){
-    //Serial.println("Pressed!");
     byte a = 'm';
     btSerial.write(a);
     BPM = 0;
@@ -120,20 +117,14 @@ void loop() {
 void setValueFromBT(){
   while(1){
     if(btSerial.available()){
-      //Serial.println("Received!");
       feelingState = btSerial.read();
-      //Serial.print("state = ");
-      //Serial.println((int)feelingState);
       break;
       
     }
   }
   while(1){
     if(btSerial.available()){
-      //Serial.println("Received!");
       BPM = btSerial.read();
-      //Serial.print("BPM = ");
-      //Serial.println((int)BPM);
       break;
     }
   }
