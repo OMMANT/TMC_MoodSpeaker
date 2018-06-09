@@ -1,21 +1,24 @@
 #include <SoftwareSerial.h>
-//핀 설정
+
 #define BT_TXD 2
 #define BT_RXD 3
 
-//소프트웨어 UART 설정
 SoftwareSerial btSerial(BT_TXD, BT_RXD);
 
-void setup(){
-   Serial.begin(9600);
-   btSerial.begin(9600);
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  btSerial.begin(9600);
 }
 
-void loop(){
-   if (btSerial.available()){
-      Serial.write(btSerial.read());
-   }
-   if (Serial.available()){
-      btSerial.write(Serial.read());
-   }
+void loop() {
+  // put your main code here, to run repeatedly:
+  byte alpha = 123;
+  if(Serial.available()){
+    if(Serial.read() == 'm')
+      btSerial.write(alpha);
+  }
+  if(btSerial.available()){
+    Serial.write(btSerial.read());
+  }
 }
